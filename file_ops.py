@@ -65,5 +65,5 @@ def handle_file(source, dest_dir, link_file, move_file):
         os.remove(date_path)
     link_file(hashed_path, date_path)
 
-    if move_file and not hashed_path == source:
+    if move_file and not dest_dir == source[0:len(dest_dir)]:
         os.remove(source)
