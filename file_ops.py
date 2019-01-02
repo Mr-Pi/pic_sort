@@ -2,6 +2,7 @@ import os
 import hashlib
 import exifread
 import shutil
+from datetime import datetime
 
 def iter_files(paths, valid_extensions):
     for path in paths:
@@ -34,7 +35,7 @@ def handle_file(source, dest_dir, link_file, move_file):
 
     hashed_path = os.path.join(dest_dir, 'hashed/raw', sha512)
     if not os.path.exists(hashed_path):
-        shutil.copy(source, hashed_path)
+        shutil.copy2(source, hashed_path)
 
     hashed_ext_path = os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension
     if os.path.exists(hashed_ext_path) or os.path.islink(hashed_ext_path):
@@ -47,6 +48,11 @@ def handle_file(source, dest_dir, link_file, move_file):
         if date_key in exif_data:
             date_str = exif_data[date_key]
             break
+    try:
+        date_str
+    except NameError:
+        date_str = datetime.fromtimestamp(os.stat(source).st_mtime)
+        date_str = date_str.strftime('%Y%m%d_%H%M%S')
     date_str = str(date_str).replace(':','').replace(' ','_')
     index = 0
     date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:03}{}'.format(index, extension)
