@@ -29,7 +29,6 @@ def prepare_dest(dest_dir):
 def handle_file(source, dest_dir, link_file, move_file):
     source = os.path.abspath(source)
     dest_dir = os.path.abspath(dest_dir)
-    print("processing {}".format(source))
     extension = source[-4:].lower()
     sha512 = sha512sum_file(source)
 
