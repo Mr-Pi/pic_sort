@@ -104,11 +104,18 @@ if __name__ == "__main__":
     os.system('sort -u -o {} {}'.format(log_file_path, log_file_path_temp))
     os.remove(log_file_path_temp)
 
+    lines = 0
+    with open(log_file_path) as log_file:
+        for _ in log_file:
+            lines += 1
+
+    linec = 0
     with open(log_file_path) as log_file:
         for line in log_file:
+            linec += 1
             data = json.loads(line)
             basename = data[0]
             extension = data[3]
             sha512 = data[4]
             file_ops.create_links(args.destination, sha512, extension, basename, link_file)
-            print("linked file {}".format(basename))
+            print("{:6.2f}% linked file {}".format(linec/lines*100, basename))
