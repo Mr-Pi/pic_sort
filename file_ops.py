@@ -21,11 +21,6 @@ def sha512sum_file(filename):
         return sha512.hexdigest()
 
 def prepare_dest(dest_dir):
-    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date'] ]:
-        try:
-            shutil.rmtree(directory)
-        except FileNotFoundError:
-            pass
     for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'hashed/raw'] ]:
         os.makedirs(directory, exist_ok=True)
 
