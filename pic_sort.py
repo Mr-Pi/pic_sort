@@ -52,31 +52,32 @@ def handler(handler_queue, dest_dir, move_file, log_file):
             json_str = json.dumps([os.path.basename(filename), filename, os.path.abspath(filename), os.path.splitext(filename)[1], sha512])
             log_file.write('{}\n'.format(json_str))
         except Exception:
-            print("Failed to handle file {}".format(filename))
+            print('Failed to handle file {}'.format(filename))
             traceback.print_exc(file=sys.stdout)
             os._exit(10)
         print('Thread {}: prepared {}'.format(thread_id, filename))
         handler_queue.task_done()
     print('Thread {} finished'.format(thread_id))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
     if args.move:
-        print("Move all files to destination path")
+        print('Move all files to destination path')
         move_file = True
     else:
-        print("Copy all files to destination path")
+        print('Copy all files to destination path')
         move_file = False
 
     if args.symlink:
-        print("Create symlinks to hashed file")
+        print('Create symlinks to hashed file')
         link_file = os.symlink
     else:
-        print("Create hardlinks between destination files")
+        print('Create hardlinks between destination files')
         link_file = os.link
 
     file_ops.prepare_dest(args.destination)
+    print('Destination is prepared')
 
     threads = []
     handler_queue = queue.Queue(args.queue_size)
@@ -118,4 +119,4 @@ if __name__ == "__main__":
             extension = data[3]
             sha512 = data[4]
             file_ops.create_links(args.destination, sha512, extension, basename, link_file)
-            print("{:6.2f}% linked file {}".format(linec/lines*100, basename))
+            print('{:6.2f}% linked file {}'.format(linec/lines*100, basename))
