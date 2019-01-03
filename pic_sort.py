@@ -4,9 +4,12 @@ import file_ops
 import os
 import threading
 import queue
+import traceback
+import sys
 
 description='''
 Search pictures at given paths and sorts them based on there exif data.
+
 
 use -- to end optional arguments section
 '''
@@ -27,8 +30,13 @@ def handler(handler_queue, dest_dir, link_file, move_file):
     while not exit_flag:
         if handler_queue.empty():
             continue
-        filename = handler_queue.get()
-        file_ops.handle_file(filename, dest_dir, link_file, move_file)
+        filename, file_number = handler_queue.get()
+        try:
+            file_ops.handle_file(filename, dest_dir, link_file, move_file, file_number)
+        except Exception:
+            print("Failed to handle file {}".format(filename))
+            traceback.print_exc(file=sys.stdout)
+            os._exit(10)
         print('Thread {}: processed {}'.format(thread_id, filename))
         handler_queue.task_done()
     print('Thread {} finished'.format(thread_id))
@@ -61,8 +69,13 @@ if __name__ == "__main__":
         thread.start()
         threads.append(thread)
 
+    file_number = 0
     for filename in file_ops.iter_files(args.paths, [ '.' + extension.lower() for extension in args.extensions ]):
-        handler_queue.put(filename)
+        handler_queue.put((filename, file_number))
+        if file_number < 999999999:
+            file_number += 1
+        else:
+            file_number = 0
 
     handler_queue.join()
     exit_flag = True

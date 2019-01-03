@@ -41,14 +41,17 @@ def get_image_date_str(source):
     date_str = str(date_str).replace(':','').replace(' ','_')
     return date_str
 
-def handle_file(source, dest_dir, link_file, move_file):
+def handle_file(source, dest_dir, link_file, move_file, file_number):
     source = os.path.abspath(source)
     dest_dir = os.path.abspath(dest_dir)
     extension = source[-4:].lower()
     sha512 = sha512sum_file(source)
 
     hashed_path = os.path.join(dest_dir, 'hashed/raw', sha512)
-    if not os.path.exists(hashed_path):
+    if os.path.exists(hashed_path):
+        file_already_exists = True
+    else:
+        file_already_exists = False
         shutil.copy2(source, hashed_path)
 
     hashed_ext_path = os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension
@@ -57,16 +60,16 @@ def handle_file(source, dest_dir, link_file, move_file):
     link_file(hashed_path, hashed_ext_path)
 
     date_str = get_image_date_str(source)
-    index = 0
-    date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:03}{}'.format(index, extension)
+    date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:09}{}'.format(file_number, extension)
     while os.path.exists(date_path):
         if os.stat(date_path).st_ino == os.stat(hashed_path).st_ino:
             break
-        index += 1
-        date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:03}{}'.format(index, extension)
-    if os.path.exists(date_path) or os.path.islink(date_path):
+        file_number += 1
+        date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:09}{}'.format(file_number, extension)
+    if (os.path.exists(date_path) or os.path.islink(date_path)) and not file_already_exists:
         os.remove(date_path)
-    link_file(hashed_path, date_path)
+    if not file_already_exists:
+        link_file(hashed_path, date_path)
 
     if move_file and not dest_dir == source[0:len(dest_dir)]:
         os.remove(source)
