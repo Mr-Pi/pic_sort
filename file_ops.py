@@ -26,6 +26,21 @@ def prepare_dest(dest_dir):
         except FileExistsError:
             pass
 
+def get_image_date_str(source):
+    with open(source, 'rb') as f:
+        exif_data = exifread.process_file(f)
+    for date_key in ['Image DateTimeOriginal', 'Image DateTime']:
+        if date_key in exif_data:
+            date_str = exif_data[date_key]
+            break
+    try:
+        date_str
+    except NameError:
+        date_str = datetime.fromtimestamp(os.stat(source).st_mtime)
+        date_str = date_str.strftime('%Y%m%d_%H%M%S')
+    date_str = str(date_str).replace(':','').replace(' ','_')
+    return date_str
+
 def handle_file(source, dest_dir, link_file, move_file):
     source = os.path.abspath(source)
     dest_dir = os.path.abspath(dest_dir)
@@ -41,18 +56,7 @@ def handle_file(source, dest_dir, link_file, move_file):
         os.remove(hashed_ext_path)
     link_file(hashed_path, hashed_ext_path)
 
-    with open(hashed_path, 'rb') as f:
-        exif_data = exifread.process_file(f)
-    for date_key in ['Image DateTimeOriginal', 'Image DateTime']:
-        if date_key in exif_data:
-            date_str = exif_data[date_key]
-            break
-    try:
-        date_str
-    except NameError:
-        date_str = datetime.fromtimestamp(os.stat(source).st_mtime)
-        date_str = date_str.strftime('%Y%m%d_%H%M%S')
-    date_str = str(date_str).replace(':','').replace(' ','_')
+    date_str = get_image_date_str(source)
     index = 0
     date_path = os.path.join(dest_dir, 'by_date', date_str) + '_{:03}{}'.format(index, extension)
     while os.path.exists(date_path):
