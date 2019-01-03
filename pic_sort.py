@@ -12,6 +12,20 @@ import json
 description='''
 Search pictures at given paths and sorts them based on there exif data.
 
+This script generates following structure at the destination directory:
+    * hashed/raw/
+        - all found files without an extension named by the sha512sum
+    * hashed/with_extension/
+        - links to hashed files with extension appended
+    * by_date/
+        - links to hashed files with extension appended and named by exif date
+          (fallback to modification date)
+          The date is converted to UTC and named by the UTC time
+
+
+IMPORTANT: Do not delete the log.txt file at the destination!!!
+           This file is required to update all links and keeps track of the
+           corrected extension and original name.
 
 use -- to end optional arguments section
 '''
