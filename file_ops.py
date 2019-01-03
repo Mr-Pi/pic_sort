@@ -74,7 +74,7 @@ def handle_file_copy_move(source, dest_dir, move_file):
     return sha512
 
 
-def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path, link_file, search_list):
+def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path, search_list):
     for key in search_list:
         if key in exif_data:
             value = str(exif_data[key])
@@ -90,18 +90,18 @@ def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path
     path = os.path.join(path, date_path_basename)
     if os.path.exists(path):
         os.remove(path)
-    link_file(hashed_path, path)
+    os.symlink(hashed_path, path)
 
 
-def create_links(dest_dir, sha512, extension, basename, link_file):
+def create_links(dest_dir, sha512, extension, basename):
     hashed_path = os.path.abspath( os.path.join(dest_dir, 'hashed/raw', sha512) )
     hashed_ext_path = os.path.abspath( os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension )
     original_name_path = '{}__{}{}'.format(
             os.path.abspath( os.path.join(dest_dir, 'hashed/original_name', os.path.splitext(basename)[0]) ), sha512, extension )
     if os.path.exists(hashed_ext_path):
         return
-    link_file(hashed_path, hashed_ext_path)
-    link_file(hashed_path, original_name_path)
+    os.symlink(hashed_path, hashed_ext_path)
+    os.symlink(hashed_path, original_name_path)
 
     exif_data = get_image_exif_data(hashed_path)
 
@@ -110,9 +110,9 @@ def create_links(dest_dir, sha512, extension, basename, link_file):
     date_path_basename = os.path.basename(date_path)
     if os.path.exists(date_path):
         os.remove(date_path)
-    link_file(hashed_path, date_path)
+    os.symlink(hashed_path, date_path)
 
-    create_by_link(dest_dir, exif_data, date_path_basename, 'by_camera_model', hashed_path, link_file,
+    create_by_link(dest_dir, exif_data, date_path_basename, 'by_camera_model', hashed_path,
             ['Image Model', 'Image Make', 'MakerNote ImageType'])
-    create_by_link(dest_dir, exif_data, date_path_basename, 'by_author', hashed_path, link_file,
+    create_by_link(dest_dir, exif_data, date_path_basename, 'by_author', hashed_path,
             ['Image Artist', 'MakerNote OwnerName', 'EXIF CameraOwnerName'])

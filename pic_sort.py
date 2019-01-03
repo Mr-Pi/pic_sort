@@ -34,7 +34,6 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
 parser.add_argument('-p', '--paths', type=str, help='search for pictures at the given path', required=True, nargs='+')
 parser.add_argument('-e', '--extensions', type=str, help='extensions which should recognized as pictures', nargs='+', default=['jpg', 'cr2'])
 parser.add_argument('-m', '--move', help='move all found pictures to destination path (the default is to copy them)', action='store_true')
-parser.add_argument('-s', '--symlink', help='create symlinks for all sorted files instead of hardlinks', action='store_true')
 parser.add_argument('-t', '--threads', type=int, help='number of threads to use to process files', default=4)
 parser.add_argument('-q', '--queue-size', dest='queue_size', type=int, help='queue size to use to stack files to process', default=10)
 parser.add_argument('destination', help='destination path for the sorted picture tree')
@@ -68,13 +67,6 @@ if __name__ == '__main__':
     else:
         print('Copy all files to destination path')
         move_file = False
-
-    if args.symlink:
-        print('Create symlinks to hashed file')
-        link_file = os.symlink
-    else:
-        print('Create hardlinks between destination files')
-        link_file = os.link
 
     file_ops.prepare_dest(args.destination)
     print('Destination is prepared')
@@ -119,5 +111,5 @@ if __name__ == '__main__':
             basename = data[0]
             extension = data[3]
             sha512 = data[4]
-            file_ops.create_links(args.destination, sha512, extension, basename, link_file)
+            file_ops.create_links(args.destination, sha512, extension, basename)
             print('{:6.2f}% linked file {}'.format(linec/lines*100, basename))
