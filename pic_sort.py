@@ -89,6 +89,7 @@ if __name__ == '__main__':
     except FileNotFoundError:
         pass
     log_file = open(log_file_path_temp, 'a+')
+
     for i in range(0,args.threads):
         thread = threading.Thread(name = '{}'.format(i), target=handler,
                 args=(handler_queue, args.destination, move_file, log_file,))
