@@ -2,6 +2,7 @@ import os
 import hashlib
 import exifread
 import shutil
+import re
 from datetime import datetime
 
 def iter_files(paths, valid_extensions):
@@ -20,20 +21,20 @@ def sha512sum_file(filename):
         return sha512.hexdigest()
 
 def prepare_dest(dest_dir):
-    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'by_tags'] ]:
+    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date'] ]:
         try:
             shutil.rmtree(directory)
         except FileNotFoundError:
             pass
-    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'by_tags', 'hashed/raw'] ]:
-        try:
-            os.makedirs(directory)
-        except FileExistsError:
-            pass
+    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'hashed/raw'] ]:
+        os.makedirs(directory, exist_ok=True)
 
-def get_image_date_str(source):
+def get_image_exif_data(source):
     with open(source, 'rb') as f:
         exif_data = exifread.process_file(f)
+    return exif_data
+
+def get_image_date_str(source, exif_data):
     for date_key in ['Image DateTimeOriginal', 'Image DateTime']:
         if date_key in exif_data:
             date_str = exif_data[date_key]
@@ -70,6 +71,22 @@ def handle_file_copy_move(source, dest_dir, move_file):
 
     return sha512
 
+def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path, link_file, search_list):
+    for key in search_list:
+        if key in exif_data:
+            value = str(exif_data[key])
+            break
+    try:
+        value = re.sub('[^0-9A-Za-z]', '_', value)
+        path = os.path.join(dest_dir, by_type, value)
+        os.makedirs(path, exist_ok=True)
+        path = os.path.join(path, date_path_basename)
+        if not os.path.exists(path):
+            link_file(hashed_path, path)
+
+    except NameError:
+        pass
+
 def create_links(dest_dir, sha512, extension, basename, link_file):
     hashed_path = os.path.abspath( os.path.join(dest_dir, 'hashed/raw', sha512) )
     hashed_ext_path = os.path.abspath( os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension )
@@ -77,7 +94,14 @@ def create_links(dest_dir, sha512, extension, basename, link_file):
         return
     link_file(hashed_path, hashed_ext_path)
 
-    date_str = get_image_date_str(hashed_path)
+    exif_data = get_image_exif_data(hashed_path)
+
+    date_str = get_image_date_str(hashed_path, exif_data)
     date_path = get_unique_date_path(dest_dir, hashed_path, extension, date_str)
-    if not os.path.exists(date_path):
-        link_file(hashed_ext_path, date_path)
+    date_path_basename = os.path.basename(date_path)
+    link_file(hashed_path, date_path)
+
+    create_by_link(dest_dir, exif_data, date_path_basename, 'by_camera_model', hashed_path, link_file,
+            ['Image Model', 'Image Make', 'MakerNote ImageType'])
+    create_by_link(dest_dir, exif_data, date_path_basename, 'by_author', hashed_path, link_file,
+            ['Image Artist', 'MakerNote OwnerName', 'EXIF CameraOwnerName'])
