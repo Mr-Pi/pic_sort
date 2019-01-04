@@ -28,20 +28,20 @@ def get_location_info(a, b, c=False, d=None, e=None, f=None, g=None, h=None, i=F
     
     raw = geolocator.reverse('{}, {}'.format(lat, lon))
 
-    path_str = '_none_'
+    path = [ '_none_' ]
 
     if 'address' in raw.raw:
         if 'country' in raw.raw['address']:
-            path_str = raw.raw['address']['country']
+            path = [ raw.raw['address']['country'] ]
         if 'state' in raw.raw['address']:
-            path_str += '/' + raw.raw['address']['state']
+            path.append(raw.raw['address']['state'])
         elif 'county' in raw.raw['address']:
-            path_str += '/' + raw.raw['address']['county']
+            path.append(raw.raw['address']['county'])
         if 'state_district' in raw.raw['address']:
-            path_str += '/' + raw.raw['address']['state_district']
+            path.append(raw.raw['address']['state_district'])
 
-    path_str = path_str.replace(' ', '_')
+    path = [ part.replace(' ', '_') for part in path ]
     if normalize:
-        path_str = unicodedata.normalize('NFKD', path_str).encode('ascii','ignore')
+        path = [ unicodedata.normalize('NFKD', part).encode('ascii','ignore') for part in path ]
 
-    return {'latitude': lat, 'longitude': lon, 'address': raw.address, 'raw': raw, 'path_str': path_str}
+    return {'latitude': lat, 'longitude': lon, 'address': raw.address, 'raw': raw, 'path': path}
