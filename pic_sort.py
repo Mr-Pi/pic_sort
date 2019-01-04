@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import file_ops
+import location_ops
 import os
 import shutil
 import threading
@@ -36,6 +37,7 @@ parser.add_argument('-e', '--extensions', type=str, help='extensions which shoul
 parser.add_argument('-m', '--move', help='move all found pictures to destination path (the default is to copy them)', action='store_true')
 parser.add_argument('-t', '--threads', type=int, help='number of threads to use to process files', default=4)
 parser.add_argument('-q', '--queue-size', dest='queue_size', type=int, help='queue size to use to stack files to process', default=10)
+parser.add_argument('-u', '--update', help='recreate all links, this must be run once after pic_sort is updated', action='store_true')
 parser.add_argument('destination', help='destination path for the sorted picture tree')
 
 exit_flag = False
@@ -111,5 +113,5 @@ if __name__ == '__main__':
             basename = data[0]
             extension = data[3]
             sha512 = data[4]
-            file_ops.create_links(args.destination, sha512, extension, basename)
+            file_ops.create_links(args.destination, sha512, extension, basename, args.update)
             print('{:6.2f}% linked file {}'.format(linec/lines*100, basename))

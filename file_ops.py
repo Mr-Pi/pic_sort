@@ -3,6 +3,7 @@ import hashlib
 import exifread
 import shutil
 import re
+import location_ops
 from datetime import datetime
 
 
@@ -93,15 +94,37 @@ def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path
     os.symlink(hashed_path, path)
 
 
-def create_links(dest_dir, sha512, extension, basename):
+def create_geolocation_link(dest_dir, exif_data, date_path_basename, hashed_path):
+    if 'GPS GPSLatitude' in exif_data:
+        path = location_ops.get_location_info(
+                str(exif_data['GPS GPSLatitudeRef']),
+                exif_data['GPS GPSLatitude'].values[0].num / exif_data['GPS GPSLatitude'].values[0].den,
+                exif_data['GPS GPSLatitude'].values[1].num / exif_data['GPS GPSLatitude'].values[1].den,
+                exif_data['GPS GPSLatitude'].values[2].num / exif_data['GPS GPSLatitude'].values[2].den,
+                str(exif_data['GPS GPSLongitudeRef']),
+                exif_data['GPS GPSLongitude'].values[0].num / exif_data['GPS GPSLongitude'].values[0].den,
+                exif_data['GPS GPSLongitude'].values[1].num / exif_data['GPS GPSLongitude'].values[1].den,
+                exif_data['GPS GPSLongitude'].values[2].num / exif_data['GPS GPSLongitude'].values[2].den)['path_str']
+    else:
+        path = '_unknown_'
+    path = os.path.join(dest_dir, 'by_location', path)
+    os.makedirs(path, exist_ok=True)
+    path = os.path.join(path, date_path_basename)
+    if os.path.exists(path):
+        os.remove(path)
+    os.symlink(hashed_path, path)
+
+def create_links(dest_dir, sha512, extension, basename, update):
     hashed_path = os.path.abspath( os.path.join(dest_dir, 'hashed/raw', sha512) )
     hashed_ext_path = os.path.abspath( os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension )
     original_name_path = '{}__{}{}'.format(
             os.path.abspath( os.path.join(dest_dir, 'hashed/original_name', os.path.splitext(basename)[0]) ), sha512, extension )
-    if os.path.exists(hashed_ext_path):
+    if os.path.exists(hashed_ext_path) and not update:
         return
-    os.symlink(hashed_path, hashed_ext_path)
-    os.symlink(hashed_path, original_name_path)
+    if not os.path.exists(hashed_ext_path):
+        os.symlink(hashed_path, hashed_ext_path)
+    if not os.path.exists(original_name_path):
+        os.symlink(hashed_path, original_name_path)
 
     exif_data = get_image_exif_data(hashed_path)
 
@@ -116,3 +139,4 @@ def create_links(dest_dir, sha512, extension, basename):
             ['Image Model', 'Image Make', 'MakerNote ImageType'])
     create_by_link(dest_dir, exif_data, date_path_basename, 'by_author', hashed_path,
             ['Image Artist', 'MakerNote OwnerName', 'EXIF CameraOwnerName'])
+    create_geolocation_link(dest_dir, exif_data, date_path_basename, hashed_path)
