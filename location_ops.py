@@ -26,6 +26,8 @@ def parse_gpx_file(filename):
 
 
 def get_gpx_location(timestamp, max_diff):
+    if len(database['times']) < 2 or timestamp < database['times'][0] or timestamp > database['times'][-1]:
+        return (None, None)
     for i in range(0, len(database['times'])-1):
         t_gpx_1 = database['times'][i]
         t_gpx_2 = database['times'][i+1]
