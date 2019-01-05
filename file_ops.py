@@ -107,6 +107,10 @@ def create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_pat
                 exif_data['GPS GPSLongitude'].values[2].num / exif_data['GPS GPSLongitude'].values[2].den)['path']
     else:
         location_info = ['_unknown_']
+        latitude, longitude = location_ops.get_gpx_location(
+                datetime.strptime(date_path_basename[0:15], '%Y%m%d_%H%M%S').timestamp(), 120)
+        if latitude and longitude:
+            location_info = location_ops.get_location_info(latitude, longitude)['path']
     location_info.reverse()
     path = os.path.join(dest_dir, 'by_location')
     while len(location_info) > 1:

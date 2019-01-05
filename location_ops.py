@@ -2,13 +2,46 @@ import geopy
 import gpxpy
 import unicodedata
 
+
 try:
     database
     geolocator
 except NameError:
-    database = {'keys': [], 'values': []}
+    database = {'times': [], 'points': {}}
     geolocator = geopy.Nominatim(user_agent='pic_sort')
     print('Location operations initiated')
+
+
+def parse_gpx_file(filename):
+    with open(filename, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+        for track in gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    timestamp = point.time.timestamp()
+                    if timestamp not in database['times']:
+                        latitude = point.latitude
+                        longitude = point.longitude
+                        database['times'].append(timestamp)
+                        database['points'][timestamp] = {'latitude': latitude, 'longitude': longitude}
+    database['times'].sort()
+
+
+def get_gpx_location(timestamp, max_diff):
+    for i in range(0, len(database['times'])-1):
+        t_gpx_1 = database['times'][i]
+        t_gpx_2 = database['times'][i+1]
+        if timestamp >= t_gpx_1 and timestamp <= t_gpx_2:
+            if ( timestamp - t_gpx_1 ) > max_diff or ( t_gpx_2 - timestamp ) > max_diff:
+                break
+            latitude_1 = database['points'][t_gpx_1]['latitude']; longitude_1 = database['points'][t_gpx_1]['longitude']
+            latitude_2 = database['points'][t_gpx_2]['latitude']; longitude_2 = database['points'][t_gpx_2]['longitude']
+            fak = ( timestamp - t_gpx_1 ) / ( t_gpx_2 - t_gpx_1 )
+            latitude = ( latitude_2 - latitude_1 ) * fak + latitude_1
+            longitude = ( longitude_2 - longitude_1 ) * fak + longitude_1
+            return (latitude, longitude)
+    return (None, None)
+
 
 def _convert_to_decimal(lat_dir, lat_deg, lat_min, lat_sec, lon_dir, lon_deg, lon_min, lon_sec):
     direction = {'N':1, 'S':-1, 'E': 1, 'W':-1}

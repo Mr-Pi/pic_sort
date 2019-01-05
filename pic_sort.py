@@ -33,7 +33,7 @@ use -- to end optional arguments section
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=description)
 parser.add_argument('-p', '--paths', type=str, help='search for pictures at the given path', required=True, nargs='+')
-parser.add_argument('-e', '--extensions', type=str, help='extensions which should recognized as pictures', nargs='+', default=['jpg', 'cr2'])
+parser.add_argument('-e', '--extensions', type=str, help='extensions which should be parsed', nargs='+', default=['jpg', 'jpeg', 'cr2', 'gpx'])
 parser.add_argument('-m', '--move', help='move all found pictures to destination path (the default is to copy them)', action='store_true')
 parser.add_argument('-t', '--threads', type=int, help='number of threads to use to process files', default=4)
 parser.add_argument('-q', '--queue-size', dest='queue_size', type=int, help='queue size to use to stack files to process', default=10)
@@ -49,9 +49,14 @@ def handler(handler_queue, dest_dir, move_file, log_file):
             continue
         filename = handler_queue.get()
         try:
-            sha512 = file_ops.handle_file_copy_move(filename, dest_dir, move_file)
-            json_str = json.dumps([os.path.basename(filename), filename, os.path.abspath(filename), os.path.splitext(filename)[1], sha512])
-            log_file.write('{}\n'.format(json_str))
+            extension = os.path.splitext(filename)[1]
+            if extension != '.gpx':
+                sha512 = file_ops.handle_file_copy_move(filename, dest_dir, move_file)
+                json_str = json.dumps([os.path.basename(filename), filename, os.path.abspath(filename), extension, sha512])
+                log_file.write('{}\n'.format(json_str))
+            else:
+                location_ops.parse_gpx_file(filename)
+                print('parsed gpx file')
         except Exception:
             print('Failed to handle file {}'.format(filename))
             traceback.print_exc(file=sys.stdout)
