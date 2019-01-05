@@ -94,7 +94,7 @@ def create_by_link(dest_dir, exif_data, date_path_basename, by_type, hashed_path
     os.symlink(hashed_path, path)
 
 
-def create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_path):
+def create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_path, max_diff):
     if 'GPS GPSLatitude' in exif_data:
         location_info = location_ops.get_location_info(
                 str(exif_data['GPS GPSLatitudeRef']),
@@ -108,7 +108,7 @@ def create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_pat
     else:
         location_info = ['_unknown_']
         latitude, longitude = location_ops.get_gpx_location(
-                datetime.strptime(date_path_basename[0:15], '%Y%m%d_%H%M%S').timestamp(), 120)
+                datetime.strptime(date_path_basename[0:15], '%Y%m%d_%H%M%S').timestamp(), max_diff)
         if latitude and longitude:
             location_info = location_ops.get_location_info(latitude, longitude)['path']
     location_info.reverse()
@@ -129,7 +129,7 @@ def create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_pat
     os.symlink(hashed_path, path)
 
 
-def create_links(dest_dir, sha512, extension, basename, update):
+def create_links(dest_dir, sha512, extension, basename, update, max_diff):
     hashed_path = os.path.abspath( os.path.join(dest_dir, 'hashed/raw', sha512) )
     hashed_ext_path = os.path.abspath( os.path.join(dest_dir, 'hashed/with_extension', sha512) + extension )
     original_name_path = '{}__{}{}'.format(
@@ -154,4 +154,4 @@ def create_links(dest_dir, sha512, extension, basename, update):
             ['Image Model', 'Image Make', 'MakerNote ImageType'])
     create_by_link(dest_dir, exif_data, date_path_basename, 'by_author', hashed_path,
             ['Image Artist', 'MakerNote OwnerName', 'EXIF CameraOwnerName'])
-    create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_path)
+    create_geolocation_links(dest_dir, exif_data, date_path_basename, hashed_path, max_diff)
