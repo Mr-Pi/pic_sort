@@ -1,14 +1,12 @@
-import geopy
 import gpxpy
 import unicodedata
+import reverse_geocoder
 
 
 try:
     database
-    geolocator
 except NameError:
     database = {'times': [], 'points': {}}
-    geolocator = geopy.Nominatim(user_agent='pic_sort')
     print('Location operations initiated')
 
 
@@ -52,29 +50,28 @@ def _convert_to_decimal(lat_dir, lat_deg, lat_min, lat_sec, lon_dir, lon_deg, lo
 
 def get_location_info(a, b, c=False, d=None, e=None, f=None, g=None, h=None, i=False):
     if d == None:
-        lat = a
-        lon = b
+        latitude = a
+        longitude = b
         normalize = c
     else:
-        lat, lon = _convert_to_decimal(a, b, c, d, e, f, g, h)
+        latitude, longitude = _convert_to_decimal(a, b, c, d, e, f, g, h)
         normalize = i
     
-    raw = geolocator.reverse('{}, {}'.format(lat, lon))
+    raw = reverse_geocoder.get((latitude,longitude))
 
     path = [ '_none_' ]
 
-    if 'address' in raw.raw:
-        if 'country' in raw.raw['address']:
-            path = [ raw.raw['address']['country'] ]
-        if 'state' in raw.raw['address']:
-            path.append(raw.raw['address']['state'])
-        elif 'county' in raw.raw['address']:
-            path.append(raw.raw['address']['county'])
-        if 'state_district' in raw.raw['address']:
-            path.append(raw.raw['address']['state_district'])
+    if len(raw['cc']) > 0:
+        path = [ raw['cc'] ]
+    if len(raw['admin1']) > 0:
+        path.append(raw['admin1'])
+    if len(raw['admin2']) > 0:
+        path.append(raw['admin2'])
+    if len(raw['name']) > 0:
+        path.append(raw['name'])
 
     path = [ part.replace(' ', '_') for part in path ]
     if normalize:
         path = [ unicodedata.normalize('NFKD', part).encode('ascii','ignore') for part in path ]
 
-    return {'latitude': lat, 'longitude': lon, 'address': raw.address, 'raw': raw, 'path': path}
+    return {'latitude': latitude, 'longitude': longitude, 'raw': raw, 'path': path}
