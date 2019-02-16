@@ -46,6 +46,10 @@ def read_copy_move_sha512(source, dest_dir, move_file):
         os.symlink(hashed_path, hashed_path_extension)
     if move_file and not dest_dir == source[0:len(dest_dir)]:  # don't remove from destination directory
         os.remove(source)
+        try:
+            os.rmdir(os.path.split(source)[0])
+        except OSError:
+            pass
 
     return basename, [basename, {
         'sha512': sha512, 'source': source, 'hashed_path': hashed_path,
