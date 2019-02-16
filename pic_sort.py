@@ -10,6 +10,10 @@ import traceback
 import sys
 import json
 
+import cv2
+import face_recognition
+import pickle
+
 description='''
 Search pictures at given paths and sorts them based on there exif data.
 
@@ -179,6 +183,51 @@ if __name__ == '__main__':
     iter_threaded(iter_db_file, file_ops.create_links_by, None, progess_status = progess_status,
             iter_args=(db_path,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, keyword_map, ))
 
+
+    try:
+        with open('faces.db','rb') as face_db:
+            known_face_encodings = pickle.load(face_db)
+    except FileNotFoundError:
+        known_face_encodings = {}
+    with open(db_path) as db_file:
+        for line in db_file:
+            data = json.loads(line)
+            image = face_recognition.load_image_file(data[1]['hashed_path'])
+            face_locations = face_recognition.face_locations(image)
+            face_encodings = face_recognition.face_encodings(image)
+            print('found', len(face_locations), 'faces in', data[1]['date_basename'])
+            cv2.imshow('image', image[:,:,::-1])
+            if len(face_locations) <= 0:
+                cv2.waitKey(1)
+            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+                name = None
+                known = False
+                for known_person in known_face_encodings:
+                    results = face_recognition.compare_faces(known_face_encodings[known_person], face_encoding)
+                    if True in results:
+                        name = known_person
+                        known = True
+                        break
+                cv2.imshow('face', image[top:bottom, left:right, ::-1])
+                cv2.waitKey(1)
+                cv2.waitKey(1)
+                if name == None:
+                    name = input('Name? ')
+                else:
+                    print("It's", name)
+                cv2.destroyWindow('face')
+                if name == "":
+                    name = "_unknown_"
+                path = os.path.join(dest_dir, 'by_person', name)
+                os.makedirs(path, exist_ok=True)
+                path = os.path.join(path, data[1]['date_basename'])
+                file_ops.link_file(data[1]['hashed_path'], path)
+                if not known:
+                    if not name in known_face_encodings:
+                        known_face_encodings[name] = []
+                    known_face_encodings[name].append(face_encoding)
+                    with open('faces.db', 'wb') as face_db:
+                        pickle.dump(known_face_encodings, face_db)
 
     print('\n[1;32m   finish[0m\n[0m')
     os._exit(0)
