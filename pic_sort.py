@@ -24,9 +24,9 @@ This script generates following structure at the destination directory:
           The date is converted to UTC and named by the UTC time
 
 
-IMPORTANT: Do not delete the log.txt file at the destination!!!
+IMPORTANT: Do not delete the log.json file at the destination!!!
            This file is required to update all links and keeps track of the
-           corrected extension and original name.
+           corrected extension and original path.
 
 use -- to end optional arguments section
 '''
@@ -42,82 +42,143 @@ parser.add_argument('--max-diff', dest='max_diff', help='the maximum time differ
 parser.add_argument('destination', help='destination path for the sorted picture tree')
 
 exit_flag = False
-def handler(handler_queue, dest_dir, move_file, log_file):
+
+
+keyword_map = {
+        'by_camera_model': ['Image Model', 'Image Make', 'MakerNote ImageType'],
+        'by_author': ['Image Artist', 'MakerNote OwnerName', 'EXIF CameraOwnerName', 'Thumbnail Artist']
+        }
+
+
+def stdout(string):
+    sys.stdout.write('{}                        \r'.format(string))
+
+
+def handler(handler_function, handler_queue, out_file, extra_args, progess_status):
     thread_id = threading.currentThread().getName()
-    print('Thread {} started'.format(thread_id))
     while not exit_flag:
         if handler_queue.empty():
             continue
-        filename = handler_queue.get()
+        db_entry = handler_queue.get()
         try:
-            extension = os.path.splitext(filename)[1]
-            if extension != '.gpx':
-                sha512 = file_ops.handle_file_copy_move(filename, dest_dir, move_file)
-                json_str = json.dumps([os.path.basename(filename), filename, os.path.abspath(filename), extension, sha512])
-                log_file.write('{}\n'.format(json_str))
-            else:
-                location_ops.parse_gpx_file(filename)
-                print('parsed gpx file')
+            log_output, db_entry = handler_function(db_entry, *extra_args)
+            if db_entry and out_file:
+                out_file.write('{}\n'.format(json.dumps(db_entry)))
         except Exception:
-            print('Failed to handle file {}'.format(filename))
+            print('Failed to handle {}'.format(db_entry))
             traceback.print_exc(file=sys.stdout)
             os._exit(10)
-        print('Thread {}: prepared {}'.format(thread_id, filename))
+        if progess_status:
+            progess_status['current'] += 1
+            stdout('{:6.2f}% Thread {}: {}'.format(progess_status['current']/progess_status['sum'], thread_id, log_output))
+        else:
+            stdout('Thread {}: {}'.format(thread_id, log_output))
         handler_queue.task_done()
-    print('Thread {} finished'.format(thread_id))
+
+
+def iter_threaded(iter_funtion, handler_function, out_file, handler_args=(), num_threads=8, size_queue=10, iter_args=(), progess_status=None):
+    global exit_flag
+    threads = []
+    handler_queue = queue.Queue(size_queue)
+    exit_flag = False
+    for i in range(0, num_threads):
+        thread = threading.Thread(name = '{}'.format(i), target=handler, args=(handler_function, handler_queue, out_file, handler_args, progess_status))
+        thread.start()
+        threads.append(thread)
+    for request in iter_funtion(*iter_args):
+        handler_queue.put(request)
+    handler_queue.join()
+    exit_flag = True
+    if progess_status:
+        sys.stdout.write('\r100.00%')
+    print('\n')
+
+
+def iter_db_file(db_path):
+    with open(db_path) as db_file:
+        for line in db_file:
+            yield(json.loads(line))
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    dest_dir = os.path.abspath(args.destination)
     print(args)
+    print('\n')
     if args.move:
-        print('Move all files to destination path')
+        print('[1mInfo:[0m Move all files to destination path')
         move_file = True
     else:
-        print('Copy all files to destination path')
+        print('[1mInfo:[0m Copy all files to destination path')
         move_file = False
 
+    print('\n\n')
+    print('[1mPrepare destination[0m\n')
     file_ops.prepare_dest(args.destination)
-    print('Destination is prepared')
 
-    threads = []
-    handler_queue = queue.Queue(args.queue_size)
-
-    log_file_path_temp = os.path.join(args.destination, 'log.in.txt')
-    log_file_path = os.path.join(args.destination, 'log.txt')
+    db_path = os.path.join(dest_dir, 'log.json')
+    db_path_work = os.path.join(dest_dir, 'log.working.json')
     try:
-        shutil.copy(log_file_path, log_file_path_temp)
+        shutil.copy(db_path, db_path_work)
     except FileNotFoundError:
         pass
-    log_file = open(log_file_path_temp, 'a+')
 
-    for i in range(0,args.threads):
-        thread = threading.Thread(name = '{}'.format(i), target=handler,
-                args=(handler_queue, args.destination, move_file, log_file,))
-        thread.start()
-        threads.append(thread)
 
-    for filename in file_ops.iter_files(args.paths, [ '.' + extension.lower() for extension in args.extensions ]):
-        handler_queue.put(filename)
+    # hash/parse all files and copy/move them
+    with open(db_path_work, 'w+') as db_file:
+        db_file.seek(0,2)  # goto end, append new data
 
-    handler_queue.join()
-    exit_flag = True
+        print('[1mhash all files, read gpx and copy/move[0m')
+        iter_threaded(file_ops.iter_files, file_ops.read_copy_move_sha512, db_file, num_threads = args.threads, size_queue = args.queue_size, handler_args = ( args.destination, move_file ),
+                iter_args = (args.paths, [ '.' + extension.lower() for extension in args.extensions ]))
 
-    log_file.close()
-    os.system('sort -u -o {} {}'.format(log_file_path, log_file_path_temp))
-    os.remove(log_file_path_temp)
+    os.system('sort -u -o {} {}'.format(db_path, db_path_work))
+    os.remove(db_path_work)
 
+
+    # count items to proceed
     lines = 0
-    with open(log_file_path) as log_file:
-        for _ in log_file:
+    with open(db_path) as db_file:
+        for _ in db_file:
             lines += 1
+    progess_status = {'current': 0, 'sum': lines/100}
 
-    linec = 0
-    with open(log_file_path) as log_file:
-        for line in log_file:
+
+    # collect meta data
+    print('[1mcollect meta data[0m')
+    with open(db_path_work, 'w+') as out_file:
+        iter_threaded(iter_db_file, file_ops.serialize_exif_data, out_file, progess_status = progess_status,
+                iter_args=(db_path,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (['EXIF', 'GPS', 'Image', 'Thumbnail'], args.max_diff,))
+    os.system('sort -u -o {} {}'.format(db_path, db_path_work))
+    os.remove(db_path_work)
+
+
+    # create links date
+    print('[1mcreate date links[0m')
+    with open(db_path_work, 'w+') as out_file:
+        linec = 0
+        for db_entry in iter_db_file(db_path):
+            log_output, db_entry = file_ops.create_links_date(db_entry, dest_dir)
+            out_file.write('{}\n'.format(json.dumps(db_entry)))
             linec += 1
-            data = json.loads(line)
-            basename = data[0]
-            extension = data[3]
-            sha512 = data[4]
-            file_ops.create_links(args.destination, sha512, extension, basename, args.update, args.max_diff)
-            print('{:6.2f}% linked file {}'.format(linec/lines*100, basename))
+            stdout('{:6.2f}% date link: {}'.format(linec/lines*100, log_output))
+        print('\n')
+    os.system('sort -u -o {} {}'.format(db_path, db_path_work))
+    os.remove(db_path_work)
+
+
+    # create links geolocation
+    print('[1mcreate geolocation links[0m')
+    iter_threaded(iter_db_file, file_ops.create_links_geolocation, None, progess_status = progess_status,
+            iter_args=(db_path,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir,))
+
+
+    # create by links
+    print('[1mcreate by links[0m')
+    progess_status = {'current': 0, 'sum': lines/100}
+    iter_threaded(iter_db_file, file_ops.create_links_by, None, progess_status = progess_status,
+            iter_args=(db_path,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, keyword_map, ))
+
+
+    print('\n[1;32m   finish[0m\n[0m')
+    os._exit(0)
