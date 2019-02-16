@@ -43,23 +43,15 @@ def get_gpx_location(timestamp, max_diff):
     return (None, None)
 
 
-def _convert_to_decimal(lat_dir, lat_deg, lat_min, lat_sec, lon_dir, lon_deg, lon_min, lon_sec):
+def convert_to_decimal(lat_dir, lat_deg, lat_min, lat_sec, lon_dir, lon_deg, lon_min, lon_sec):
     direction = {'N':1, 'S':-1, 'E': 1, 'W':-1}
     lat_deg = ( lat_deg + lat_min/60. + lat_sec/3600. ) * direction[lat_dir.upper()]
     lon_deg = ( lon_deg + lon_min/60. + lon_sec/3600. ) * direction[lon_dir.upper()]
     return (lat_deg, lon_deg)
 
 
-def get_location_info(a, b, c=False, d=None, e=None, f=None, g=None, h=None, i=False):
-    if d == None:
-        latitude = a
-        longitude = b
-        normalize = c
-    else:
-        latitude, longitude = _convert_to_decimal(a, b, c, d, e, f, g, h)
-        normalize = i
-    
-    raw = reverse_geocoder.get((latitude,longitude))
+def get_location_info(latitude, longitude, normalize=False):
+    raw = reverse_geocoder.get((latitude,longitude), mode=1)
 
     path = [ '_none_' ]
 
