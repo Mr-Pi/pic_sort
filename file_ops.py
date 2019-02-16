@@ -43,7 +43,7 @@ def read_copy_move_sha512(source, dest_dir, move_file):
     if not os.path.exists(hashed_path):
         shutil.copy2(source, hashed_path)
     if not os.path.exists(hashed_path_extension):
-        os.symlink(source, hashed_path_extension)
+        os.symlink(hashed_path, hashed_path_extension)
     if move_file and not dest_dir == source[0:len(dest_dir)]:  # don't remove from destination directory
         os.remove(source)
 
