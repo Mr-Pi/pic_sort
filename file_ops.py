@@ -31,10 +31,10 @@ def sha512sum_file(filename):
 
 def read_copy_move_sha512(source, dest_dir, move_file):
     extension = os.path.splitext(source)[1]
+    basename = os.path.basename(source)
     if extension == '.gpx':
         location_ops.parse_gpx_file(source)
         return basename, None
-    basename = os.path.basename(source)
     source = os.path.abspath(source)
     dest_dir = os.path.abspath(dest_dir)
     sha512 = sha512sum_file(source)

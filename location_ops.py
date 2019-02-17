@@ -16,12 +16,15 @@ def parse_gpx_file(filename):
         for track in gpx.tracks:
             for segment in track.segments:
                 for point in segment.points:
-                    timestamp = point.time.timestamp()
-                    if timestamp not in database['times']:
-                        latitude = point.latitude
-                        longitude = point.longitude
-                        database['times'].append(timestamp)
-                        database['points'][timestamp] = {'latitude': latitude, 'longitude': longitude}
+                    try:
+                        timestamp = point.time.timestamp()
+                        if timestamp not in database['times']:
+                            latitude = point.latitude
+                            longitude = point.longitude
+                            database['times'].append(timestamp)
+                            database['points'][timestamp] = {'latitude': latitude, 'longitude': longitude}
+                    except AttributeError:
+                        pass
     database['times'].sort()
 
 
