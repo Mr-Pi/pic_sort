@@ -6,7 +6,7 @@ def print_bold(string):
 
 
 def stdout(string):
-    sys.stdout.write('{}           \r'.format(string))
+    sys.stdout.write('{}[0K\r'.format(string))
 
 
 def merge_dict(a, b):
