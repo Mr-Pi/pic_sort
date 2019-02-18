@@ -31,8 +31,8 @@ def sha512sum_file(filename):
 
 def link_file(source, destination):
     try:
-        os.symlink(source, destination)
+        os.symlink(os.path.relpath(source, destination)[3:], destination)
     except FileExistsError:
         if os.stat(source).st_ino != os.stat(destination).st_ino:
             os.remove(destination)
-            os.symlink(source, destination)
+            os.symlink(os.path.relpath(source, destination)[3:], destination)
