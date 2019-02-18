@@ -60,6 +60,7 @@ def get_meta_data(entry, dest_dir, max_diff):
 
     meta_data = read_exif_data(hashed_path)
     meta_data = serialize_exif_data(meta_data, ['EXIF', 'GPS', 'Image', 'Thumbnail'])
+    meta_data['original_name'] = basename
     if 'GPS GPSLatitudeRef' in meta_data:
         latitude, longitude = convert_exif_location_decimal(meta_data)
         meta_data['latitude'] = latitude
