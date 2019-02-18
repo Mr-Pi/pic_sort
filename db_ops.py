@@ -7,9 +7,8 @@ def init_db(restore_file, host='localhost', port=6379, db_offset=0):
     db.source_hash = Redis(host=host, port=port, db=db_offset+0)
     db.source_hash.flushdb()
     db.hash_meta = Redis(host=host, port=port, db=db_offset+1)
-    db.hash_meta.flushdb()
     db.hash_datename = Redis(host=host, port=port, db=db_offset+2)
-    db.hash_datename.flushdb()
+    db.hash_face = Redis(host=host, port=port, db=db_offset+3)
     return db
 
 def get(db, key):

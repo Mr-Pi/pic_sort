@@ -1,5 +1,5 @@
-import os, re
-import location_ops, db_ops, shutil
+import os, re, shutil
+import location_ops, db_ops, face_ops
 from basic_ops import *
 from datetime import datetime
 from file_ops import sha512sum_file, link_file
@@ -12,7 +12,7 @@ keyword_map = {
 
 
 def prepare_dest(dest_dir):
-    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'hashed/raw', 'by_location/_unknown_'] ]:
+    for directory in [ os.path.join(dest_dir, sub_dir) for sub_dir in ['hashed/with_extension', 'by_date', 'hashed/raw', 'by_location/_unknown_', 'by_person/_all_'] ]:
         os.makedirs(directory, exist_ok=True)
 
 
@@ -154,6 +154,27 @@ def create_by_location(entry, dest_dir, db_meta, db_hash_datename):
     link_file(hashed_path, path)
 
     return '[37;1m{} has location data[0m'.format(basename), None, None
+
+
+def detect_faces(entry, dest_dir, db_hash_datename):
+    source = entry[0]
+    sha512 = entry[1]
+
+    basename = os.path.basename(source)
+    hashed_path = os.path.join(dest_dir, 'hashed/raw', sha512)
+    date_basename = db_ops.get(db_hash_datename, sha512)
+
+    summary = face_ops.detect_faces(source)
+
+    ret_str = ''
+    if len(summary) >= 1:
+        path = os.path.join(dest_dir, 'by_person', '_all_', date_basename)
+        link_file(hashed_path, path)
+        ret_str = '[37;1m{} has {} faces[0m'.format(basename, len(summary))
+    else:
+        ret_str = '{} has no faces'.format(basename)
+
+    return ret_str, sha512, summary
 
 
 
