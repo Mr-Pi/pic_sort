@@ -66,35 +66,29 @@ def main():
     entries = db.source_hash.dbsize()
 
     print_bold('copy/move all files')
-    progress_status = {'current': 0, 'sum': entries/100}
-    iter_threaded(db_ops.iter_db, copy_move_file, progress_status = progress_status, db=db.hash_meta,
+    iter_threaded(db_ops.iter_db, copy_move_file, progress_max = entries, db=db.hash_meta,
             iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, move_file, ))
 
     print_bold('parse meta data')
-    progress_status = {'current': 0, 'sum': entries/100}
-    iter_threaded(db_ops.iter_db, get_meta_data, progress_status = progress_status, db=db.hash_meta,
+    iter_threaded(db_ops.iter_db, get_meta_data, progress_max = entries, db=db.hash_meta,
             iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, args.max_diff, ))
 
     print_bold('create date links')
-    progress_status = {'current': 0, 'sum': entries/100}
-    iter_threaded(db_ops.iter_db, create_date_link, progress_status = progress_status, db=db.hash_datename,
+    iter_threaded(db_ops.iter_db, create_date_link, progress_max = entries, db=db.hash_datename,
             iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, db.hash_meta, ))
 
     print_bold('create by links')
-    progress_status = {'current': 0, 'sum': entries/100}
-    iter_threaded(db_ops.iter_db, create_by_link, progress_status = progress_status,
+    iter_threaded(db_ops.iter_db, create_by_link, progress_max = entries,
             iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, db.hash_meta, db.hash_datename, ))
 
     print_bold('create location links')
-    progress_status = {'current': 0, 'sum': entries/100}
-    iter_threaded(db_ops.iter_db, create_by_location, progress_status = progress_status,
+    iter_threaded(db_ops.iter_db, create_by_location, progress_max = entries,
             iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, db.hash_meta, db.hash_datename, ))
 
     if not args.skip_faces:
         print_bold('detect faces')
-        progress_status = {'current': 0, 'sum': entries/100}
-        iter_threaded(db_ops.iter_db, detect_faces, progress_status = progress_status, db=db.hash_face,
-                iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, db.hash_datename, ))
+        iter_threaded(db_ops.iter_db, detect_faces, progress_max = entries, db=db.hash_face,
+                iter_args=(db.source_hash,), num_threads = args.threads, size_queue = args.queue_size, handler_args = (dest_dir, db.hash_face, db.hash_datename, ))
 
     print('\n[1;32m   finished [0;32mprocessed {} files[0m\n[0m'.format(entries))
 

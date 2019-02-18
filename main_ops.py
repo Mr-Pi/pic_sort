@@ -156,7 +156,7 @@ def create_by_location(entry, dest_dir, db_meta, db_hash_datename):
     return '[37;1m{} has location data[0m'.format(basename), None, None
 
 
-def detect_faces(entry, dest_dir, db_hash_datename):
+def detect_faces(entry, dest_dir, db_hash_face, db_hash_datename):
     source = entry[0]
     sha512 = entry[1]
 
@@ -164,7 +164,9 @@ def detect_faces(entry, dest_dir, db_hash_datename):
     hashed_path = os.path.join(dest_dir, 'hashed/raw', sha512)
     date_basename = db_ops.get(db_hash_datename, sha512)
 
-    summary = face_ops.detect_faces(source)
+    summary = db_ops.get(db_hash_face, sha512)
+    if not isinstance(summary, list):
+        summary = face_ops.detect_faces(source)
 
     ret_str = ''
     if len(summary) >= 1:
