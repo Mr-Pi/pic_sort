@@ -1,5 +1,5 @@
 import os, re
-import location_ops, db_ops
+import location_ops, db_ops, shutil
 from basic_ops import *
 from datetime import datetime
 from file_ops import sha512sum_file, link_file
