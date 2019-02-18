@@ -54,7 +54,7 @@ def convert_to_decimal(lat_dir, lat_deg, lat_min, lat_sec, lon_dir, lon_deg, lon
 
 
 def get_location_info(latitude, longitude, normalize=False):
-    raw = reverse_geocoder.get((latitude,longitude), mode=1)
+    raw = reverse_geocoder.get((latitude,longitude), mode=1, verbose=False)
 
     path = [ '_none_' ]
 
