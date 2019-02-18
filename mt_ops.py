@@ -1,12 +1,10 @@
-import threading, queue, traceback, sys, os, pickle
+import multiprocessing, traceback, sys, os, pickle
 from basic_ops import *
 
 
 def handler(handler_function, handler_queue, extra_args, progress_status, db):
-    thread_id = threading.currentThread().getName()
-    while not exit_flag:
-        if handler_queue.empty():
-            continue
+    process_id = multiprocessing.current_process().name
+    while True:
         entry = handler_queue.get()
         try:
             log_output, k, v = handler_function(entry, *extra_args)
@@ -21,25 +19,26 @@ def handler(handler_function, handler_queue, extra_args, progress_status, db):
             os._exit(10)
         if progress_status:
             progress_status['current'] += 1
-            stdout('{:6.2f}% Thread {}: {}'.format(progress_status['current']/progress_status['sum'], thread_id, log_output))
+            stdout('{:6.2f}% Process {}: {}'.format(progress_status['current']/progress_status['sum'], process_id, log_output))
         else:
-            stdout('Thread {}: {}'.format(thread_id, log_output))
+            stdout('Process {}: {}'.format(process_id, log_output))
         handler_queue.task_done()
 
 
 def iter_threaded(iter_funtion, handler_function, db=None, handler_args=(), num_threads=8, size_queue=10, iter_args=(), progress_status=None):
-    global exit_flag
-    threads = []
-    handler_queue = queue.Queue(size_queue)
-    exit_flag = False
+    processes = []
+    handler_queue = multiprocessing.JoinableQueue(size_queue)
     for i in range(0, num_threads):
-        thread = threading.Thread(name = '{}'.format(i), target=handler, args=(handler_function, handler_queue, handler_args, progress_status, db))
-        thread.start()
-        threads.append(thread)
+        process = multiprocessing.Process(name = '{}'.format(i), target=handler, args=(handler_function, handler_queue, handler_args, progress_status, db))
+        process.start()
+        processes.append(process)
     for request in iter_funtion(*iter_args):
         handler_queue.put(request)
     handler_queue.join()
-    exit_flag = True
+    handler_queue.close()
+    for process in processes:
+        process.terminate()
+        process.join()
     if progress_status:
         sys.stdout.write('\r100.00%')
     print('\n')
