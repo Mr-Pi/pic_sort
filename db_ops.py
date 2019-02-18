@@ -12,10 +12,12 @@ def init_db(restore_file, host='localhost', port=6379, db_offset=0):
     return db
 
 def get(db, key):
-    try:
-        v = pickle.loads(db.get(key))
-    except EOFError:
-        v = None
+    v = None
+    if db.exists(key):
+        try:
+            v = pickle.loads(db.get(key))
+        except EOFError:
+            pass
     return v
 
 
