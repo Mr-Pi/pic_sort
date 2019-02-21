@@ -59,9 +59,15 @@ def main():
     print_bold('\nprepare database\n')
     db = db_ops.init_db(os.path.join(dest_dir, 'database.bin'), db_offset=args.db_offset)
 
+    print_bold('count all files')
+    entries = 0
+    for _ in iter_files(args.paths, [ '.' + extension.lower() for extension in args.extensions ]):
+        entries += 1
+    print('Need to proceed {} files\n'.format(entries))
+
     print_bold('hash all files')
     iter_threaded(iter_files, hash_file, num_threads = args.threads, size_queue = args.queue_size, handler_args = ( args.destination, ), db = db.source_hash,
-            iter_args = (args.paths, [ '.' + extension.lower() for extension in args.extensions ]))
+            iter_args = (args.paths, [ '.' + extension.lower() for extension in args.extensions ]), progress_max = entries)
 
     entries = db.source_hash.dbsize()
 
