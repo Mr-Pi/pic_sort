@@ -61,9 +61,10 @@ def main():
 
     print_bold('count all files')
     entries = 0
-    for _ in iter_files(args.paths, [ '.' + extension.lower() for extension in args.extensions ]):
+    for filename in iter_files(args.paths, [ '.' + extension.lower() for extension in args.extensions ]):
         entries += 1
-    print('Need to proceed {} files\n'.format(entries))
+        stdout('{} files | {}'.format(entries, filename))
+    print('Need to proceed {} files[0K\r\n'.format(entries))
 
     print_bold('hash all files')
     iter_threaded(iter_files, hash_file, num_threads = args.threads, size_queue = args.queue_size, handler_args = ( args.destination, ), db = db.source_hash,
